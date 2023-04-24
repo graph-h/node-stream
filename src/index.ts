@@ -1,46 +1,29 @@
 import express, { Request, Response } from "express";
 import { createReadStream } from "fs";
-import { ReadableOptions } from "stream";
-import { Readable } from "stream";
+import { once } from "events";
+
+import { MyDuplex } from "./streams/Duplex";
+
 const app = express();
-
-class Counter extends Readable {
-    _max: number;
-    _index: number;
-    constructor(opt: ReadableOptions) {
-        super(opt);
-        this._max = 1000;
-        this._index = 0;
-    }
-
-    _read(size: number): void {
-        this._index += 1;
-
-        if (this._index > this._max) {
-            this.push(null);
-        } else {
-            const buf = Buffer.from(`${this._index}`, "utf-8");
-
-            console.log(
-                `Added: ${this._index}. Cound be added`,
-                this.push(buf)
-            );
-        }
-    }
-}
-
-const counter = new Counter({ highWaterMark: 2 });
-
-counter.on("data", (chunk) => {
-    console.log(`Recived: ${chunk.toString()}`);
+const counter = new MyDuplex({
+    readableHighWaterMark: 2,
+    writableHighWaterMark: 2,
 });
 
-// app.get("/video", (req: Request, res: Response) => {
-//     const stream = createReadStream("video.mp4");
+(async () => {
+    let chunk = counter.read();
 
-//     res.contentType("video/mp4");
+    while (chunk != null) {
+        const canWrite = counter.write(chunk);
 
-//     stream.pipe(res);
-// });
+        console.log(`Can we write bunch of data? ${canWrite}`);
 
+        if (!canWrite) {
+            await once(counter, "drain");
+            console.log("drain event fired.");
+        }
+
+        chunk = counter.read();
+    }
+})();
 // app.listen(4000, () => console.log("Server is running http://localhost:4000/"));
