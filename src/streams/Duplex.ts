@@ -26,6 +26,7 @@ export class MyDuplex extends Duplex {
         callback: (error?: Error | null | undefined) => void
     ): void {
         console.log(chunk.toString());
+
         callback();
     }
 }
