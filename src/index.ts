@@ -2,28 +2,14 @@ import express, { Request, Response } from "express";
 import { createReadStream } from "fs";
 import { once } from "events";
 
-import { MyDuplex } from "./streams/Duplex";
+import { Counter as MyReadable } from "./streams/Readable";
+import { MyWritable } from "./streams/Writable";
+import { MyTransform } from "./streams/Transform";
 
-const app = express();
-const counter = new MyDuplex({
-    readableHighWaterMark: 2,
-    writableHighWaterMark: 2,
-});
+const counterReader = new MyReadable({ highWaterMark: 2 });
+const counterWriter = new MyWritable({ highWaterMark: 2 });
+const counterTransform = new MyTransform({ highWaterMark: 2 });
 
-(async () => {
-    let chunk = counter.read();
+counterReader.pipe(counterTransform).pipe(counterWriter);
 
-    while (chunk != null) {
-        const canWrite = counter.write(chunk);
-
-        console.log(`Can we write bunch of data? ${canWrite}`);
-
-        if (!canWrite) {
-            await once(counter, "drain");
-            console.log("drain event fired.");
-        }
-
-        chunk = counter.read();
-    }
-})();
 // app.listen(4000, () => console.log("Server is running http://localhost:4000/"));
